@@ -12,28 +12,36 @@ def rodar():
     try:
         url = "https://www.espn.com.br/nba/classificacao/_/grupo/liga"
         tabs = pd.read_html(url)
+        
+        # Une as tabelas da ESPN
         df = pd.concat([tabs[0], tabs[1]], axis=1)
 
-        # Limpeza para não pular times como o Thunder
+        # Remove linhas de título para não pular times como o Thunder
         df = df[~df.iloc[:, 0].str.contains("Conferência|Leste|Oeste|CONF", case=False, na=False)]
         
-        cols = ['time','v','d','pct','ja','conf','casa','visitante','div', 'pts', 'pts_contra', 'dif', 'u10','strk', ]
+        # SELEÇÃO DAS 10 COLUNAS
+        # Aqui pegamos as 10 primeiras e damos exatamente 10 nomes
         df = df.iloc[:, :10]
+        cols = ['time', 'v', 'd', 'pct', 'ja', 'conf', 'casa', 'visitante', 'u10', 'strk']
         df.columns = cols
 
         # Limpa o nome (remove o '1' de '1Thunder')
         df['time'] = df['time'].astype(str).str.replace(r'^\d+', '', regex=True).str.strip()
+        
+        # Resolve erro de JSON transformando tudo em string
         df = df.fillna('0').astype(str)
 
         dados = df.to_dict(orient='records')
 
-        # Atualiza o banco
+        # Atualiza o banco (Limpa e insere novos)
         db.table("classificacao_nba").delete().neq("time", "vazio").execute()
         db.table("classificacao_nba").insert(dados).execute()
+        
         print(f"✅ Sucesso! {len(dados)} times atualizados.")
     except Exception as e:
         print(f"❌ Erro: {e}")
-        exit(1) # Avisa o GitHub que deu erro
+        exit(1)
 
 if __name__ == "__main__":
     rodar()
+    
