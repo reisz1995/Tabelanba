@@ -16,8 +16,7 @@ jobs:
       - name: Instalar bibliotecas
         run: pip install pandas supabase lxml html5lib beautifulsoup4
       - name: Executar Script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python atualizar_nba_hub.py
-        
+              env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        NBA_API_KEY: ${{ secrets.NBA_API_KEY }} # Adicione esta linha
