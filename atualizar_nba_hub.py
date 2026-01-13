@@ -3,6 +3,7 @@ from supabase import create_client
 import os
 import re
 
+# Configuração de acesso
 URL = os.environ.get("SUPABASE_URL")
 KEY = os.environ.get("SUPABASE_KEY")
 db = create_client(URL, KEY)
@@ -10,58 +11,62 @@ db = create_client(URL, KEY)
 def rodar():
     try:
         url = "https://www.espn.com.br/nba/classificacao/_/grupo/liga"
-        tabs = pd.read_html(url)
+        # Usamos header=None para garantir que o Thunder (1º lugar) não seja tratado como cabeçalho e apagado
+        tabs = pd.read_html(url, header=None)
         
-        # Separamos as tabelas originais
-        df_nomes_raw = tabs[0]
-        df_stats_raw = tabs[1]
+        df_nomes_raw = tabs[0] # Tabela de nomes
+        df_stats_raw = tabs[1] # Tabela de estatísticas
 
-        # --- 1. LIMPEZA DA TABELA DE NOMES ---
-        # Remove títulos (Leste, Oeste) e mantém apenas o que tem nome de time
-        lixo = "Conferência|Leste|Oeste|CONF|DIV|Divisão"
-        df_nomes = df_nomes_raw[~df_nomes_raw.iloc[:, 0].str.contains(lixo, case=False, na=False)].copy()
+        # --- PASSO 1: SINCRONIZAÇÃO TOTAL ---
+        # Procuramos a primeira linha onde a coluna de vitórias é um número
+        # Isso ignora textos como "Leste", "Conferência" ou "V D PCT" que a ESPN coloca no topo
+        vitorias_col = pd.to_numeric(df_stats_raw.iloc[:, 0], errors='coerce')
+        start_index = vitorias_col.notnull().idxmax()
         
-        # --- 2. LIMPEZA DA TABELA DE ESTATÍSTICAS ---
-        # Mantém apenas as linhas onde a primeira coluna (Vitórias) é um NÚMERO
-        # Isso remove cabeçalhos repetidos (V, D, PCT) que causam o desalinhamento
-        df_stats = df_stats_raw[pd.to_numeric(df_stats_raw.iloc[:, 0], errors='coerce').notnull()].copy()
+        # Cortamos ambas as tabelas exatamente no mesmo ponto de partida
+        df_nomes = df_nomes_raw.iloc[start_index:].reset_index(drop=True)
+        df_stats = df_stats_raw.iloc[start_index:].reset_index(drop=True)
 
-        # --- 3. ALINHAMENTO ---
-        # Resetamos os índices para que a Linha 0 de um seja a Linha 0 do outro
-        df_nomes = df_nomes.reset_index(drop=True)
-        df_stats = df_stats.reset_index(drop=True)
-
-        # Juntamos as duas partes agora que estão garantidamente alinhadas
+        # Juntamos as duas agora que estão garantidamente alinhadas linha a linha
         df = pd.concat([df_nomes, df_stats], axis=1)
+
+        # --- PASSO 2: FILTRAGEM E LIMPEZA ---
+        # Mantemos apenas as linhas que são equipas reais (onde vitórias é número)
+        df = df[pd.to_numeric(df.iloc[:, 1], errors='coerce').notnull()]
         
-        # Pegamos as 13 colunas e os 30 times
-        df = df.head(30)
-        cols = ['time','v','d','pct','ja','casa','visitante','div','conf','pts','pts_contra','dif','strk']
+        # Selecionamos os 30 clubes da NBA
+        df = df.head(30).reset_index(drop=True)
+
+        # [span_3](start_span)Nomeação correta das 13 colunas[span_3](end_span)
         df = df.iloc[:, :13]
+        cols = ['time','v','d','pct','ja','casa','visitante','div','conf','pts','pts_contra','dif','strk']
         df.columns = cols
 
-        # --- 4. CORREÇÃO DOS NOMES (Sem apagar o S de San Antonio) ---
+        # --- PASSO 3: CORREÇÃO DE NOMES (Sem estragar o 'San Antonio') ---
         def limpar_nome(nome):
             nome = str(nome)
-            # 1. Remove números da posição (ex: '1', '15')
+            # Remove o número da posição inicial (ex: '1', '15')
             nome = re.sub(r'^\d+', '', nome)
-            # 2. Remove as siglas grudadas (ex: 'OKC', 'DET') sem estragar o nome real
-            # Procuramos letras maiúsculas seguidas por outra maiúscula (início da sigla + início do nome)
-            nome = re.sub(r'^[A-Z]{2,3}(?=[A-Z][a-z])', '', nome)
+            # [span_4](start_span)[span_5](start_span)Remove siglas (OKC, DET, SA) apenas se coladas ao nome (ex: SASan Antonio -> San Antonio)[span_4](end_span)[span_5](end_span)
+            nome = re.sub(r'^[A-Z]{2,3}(?=[A-Z])', '', nome)
             return nome.strip()
 
         df['time'] = df['time'].apply(limpar_nome)
+        
+        # Logs para conferir no GitHub Actions
+        print(f"Primeiro clube: {df.iloc[0]['time']} | Vitórias: {df.iloc[0]['v']}")
 
-        # Converte para string e envia ao Supabase
+        # Envio para o Supabase
         df = df.fillna('0').astype(str)
         dados = df.to_dict(orient='records')
 
         db.table("classificacao_nba").delete().neq("time", "vazio").execute()
         db.table("classificacao_nba").insert(dados).execute()
         
-        print(f"✅ Sucesso! Thunder e todos os times alinhados corretamente.")
+        print(f"✅ Sucesso! {len(dados)} equipas alinhadas e atualizadas.")
+        
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"❌ Erro fatal: {e}")
         exit(1)
 
 if __name__ == "__main__":
