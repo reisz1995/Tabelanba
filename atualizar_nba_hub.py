@@ -29,7 +29,7 @@ def rodar():
         df = df.head(30).reset_index(drop=True)
         
         # Use exatamente esta ordem de 13 colunas no seu script Python           
-        colsb = ['time','v','d','pct','ja','casa','visitante', 'div', 'conf', 'pts', 'pts_contra', 'dif', 'strk',]
+        cols = ['time','v','d','pct','ja','casa','visitante', 'div', 'conf', 'pts', 'pts_contra', 'dif', 'strk',]
         df = df.iloc[:, :13]
         df.columns = cols
 
