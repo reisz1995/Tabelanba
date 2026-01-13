@@ -2,7 +2,7 @@ name: NBA Hub Updater
 on:
   schedule:
     - cron: '0 * * * *' # Roda a cada 1 hora
-  workflow_dispatch: # Permite rodar manualmente
+  workflow_dispatch: # Permite rodar manualmente clicando num botão
 
 jobs:
   atualizar:
@@ -16,9 +16,7 @@ jobs:
           python-version: '3.10'
 
       - name: Instalar bibliotecas
-        run: |
-          pip install requests supabase
-          # Removido pandas e bs4 pois a API não precisa deles, deixando o robô mais rápido
+        run: pip install requests supabase
 
       - name: Executar Script
         env:
