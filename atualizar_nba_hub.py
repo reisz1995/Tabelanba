@@ -17,7 +17,7 @@ def rodar():
         # Limpeza para não pular times como o Thunder
         df = df[~df.iloc[:, 0].str.contains("Conferência|Leste|Oeste|CONF", case=False, na=False)]
         
-        cols = ['time','v','d','pct','gb','conf','casa','visitante','u10','stk']
+        cols = ['time','v','d','pct','ja','conf','casa','visitante','div', 'pts', 'pts_contra', 'dif', 'u10','strk', ]
         df = df.iloc[:, :10]
         df.columns = cols
 
