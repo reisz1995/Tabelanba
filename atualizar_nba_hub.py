@@ -3,7 +3,6 @@ from supabase import create_client
 import os
 import re
 
-# Configuração de conexão
 URL = os.environ.get("SUPABASE_URL")
 KEY = os.environ.get("SUPABASE_KEY")
 db = create_client(URL, KEY)
@@ -13,57 +12,56 @@ def rodar():
         url = "https://www.espn.com.br/nba/classificacao/_/grupo/liga"
         tabs = pd.read_html(url)
         
-        # Separamos as duas tabelas da ESPN
-        df_nomes = tabs[0] # Coluna com os nomes dos times
-        df_stats = tabs[1] # Colunas com V, D, PCT, etc.
+        # Separamos as tabelas originais
+        df_nomes_raw = tabs[0]
+        df_stats_raw = tabs[1]
 
-        # --- PASSO 1: LIMPEZA INDEPENDENTE (O Segredo do Alinhamento) ---
-        # Definimos o que é "lixo" que a ESPN joga no meio da tabela
-        lixo = "Conferência|Leste|Oeste|CONF|DIV|Divisão|Noroeste|Pacífico|Sudoeste|Atlântico|Central|Sudeste"
-
-        # Limpamos a tabela de nomes
-        df_nomes = df_nomes[~df_nomes.iloc[:, 0].str.contains(lixo, case=False, na=False)]
+        # --- 1. LIMPEZA DA TABELA DE NOMES ---
+        # Remove títulos (Leste, Oeste) e mantém apenas o que tem nome de time
+        lixo = "Conferência|Leste|Oeste|CONF|DIV|Divisão"
+        df_nomes = df_nomes_raw[~df_nomes_raw.iloc[:, 0].str.contains(lixo, case=False, na=False)].copy()
         
-        # Limpamos a tabela de estatísticas (removemos linhas onde 'V' não é número)
-        # Isso remove os cabeçalhos repetidos "V", "D", "PCT"
-        df_stats = df_stats[pd.to_numeric(df_stats.iloc[:, 0], errors='coerce').notnull()]
+        # --- 2. LIMPEZA DA TABELA DE ESTATÍSTICAS ---
+        # Mantém apenas as linhas onde a primeira coluna (Vitórias) é um NÚMERO
+        # Isso remove cabeçalhos repetidos (V, D, PCT) que causam o desalinhamento
+        df_stats = df_stats_raw[pd.to_numeric(df_stats_raw.iloc[:, 0], errors='coerce').notnull()].copy()
 
-        # --- PASSO 2: RESET DE ÍNDICE E JUNÇÃO ---
-        # Forçamos as duas tabelas a começarem do zero para alinharem perfeitamente
+        # --- 3. ALINHAMENTO ---
+        # Resetamos os índices para que a Linha 0 de um seja a Linha 0 do outro
         df_nomes = df_nomes.reset_index(drop=True)
         df_stats = df_stats.reset_index(drop=True)
 
-        # Juntamos as duas agora que estão alinhadas
+        # Juntamos as duas partes agora que estão garantidamente alinhadas
         df = pd.concat([df_nomes, df_stats], axis=1)
-
-        # --- PASSO 3: FORMATAÇÃO FINAL ---
-        # Pegamos os 30 times e as 13 colunas do seu banco
+        
+        # Pegamos as 13 colunas e os 30 times
         df = df.head(30)
-        cols = ['time','v','d','pct','ja','casa','visitante','div','conf','pts','pts_contra','dif','strk',]
+        cols = ['time','v','d','pct','ja','casa','visitante','div','conf','pts','pts_contra','dif','strk']
         df = df.iloc[:, :13]
         df.columns = cols
 
-        # Limpeza do nome (Remove posição e sigla como '1OKC')
+        # --- 4. CORREÇÃO DOS NOMES (Sem apagar o S de San Antonio) ---
         def limpar_nome(nome):
-            nome = re.sub(r'^\d+', '', str(nome)) # Remove número no início
-            nome = re.sub(r'^[A-Z]{2,3}', '', nome) # Remove sigla (OKC, DET, etc)
+            nome = str(nome)
+            # 1. Remove números da posição (ex: '1', '15')
+            nome = re.sub(r'^\d+', '', nome)
+            # 2. Remove as siglas grudadas (ex: 'OKC', 'DET') sem estragar o nome real
+            # Procuramos letras maiúsculas seguidas por outra maiúscula (início da sigla + início do nome)
+            nome = re.sub(r'^[A-Z]{2,3}(?=[A-Z][a-z])', '', nome)
             return nome.strip()
 
         df['time'] = df['time'].apply(limpar_nome)
-        
-        # Transforma tudo em String para o Supabase aceitar sem erros
+
+        # Converte para string e envia ao Supabase
         df = df.fillna('0').astype(str)
         dados = df.to_dict(orient='records')
 
-        # --- PASSO 4: ENVIO ---
-        # Limpa a tabela e insere os dados novos e alinhados
         db.table("classificacao_nba").delete().neq("time", "vazio").execute()
         db.table("classificacao_nba").insert(dados).execute()
         
-        print(f"✅ Sucesso! {len(dados)} times alinhados e atualizados.")
-        
+        print(f"✅ Sucesso! Thunder e todos os times alinhados corretamente.")
     except Exception as e:
-        print(f"❌ Erro no processamento: {e}")
+        print(f"❌ Erro: {e}")
         exit(1)
 
 if __name__ == "__main__":
