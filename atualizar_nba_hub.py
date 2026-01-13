@@ -3,7 +3,7 @@ from supabase import create_client
 import os
 import re
 
-# Configuração de segurança via GitHub Secrets
+# Configuração de conexão
 URL = os.environ.get("SUPABASE_URL")
 KEY = os.environ.get("SUPABASE_KEY")
 db = create_client(URL, KEY)
@@ -13,43 +13,57 @@ def rodar():
         url = "https://www.espn.com.br/nba/classificacao/_/grupo/liga"
         tabs = pd.read_html(url)
         
-        # Une as tabelas (Nomes dos times + Estatísticas)
-        df = pd.concat([tabs[0], tabs[1]], axis=1)
+        # Separamos as duas tabelas da ESPN
+        df_nomes = tabs[0] # Coluna com os nomes dos times
+        df_stats = tabs[1] # Colunas com V, D, PCT, etc.
 
-        # --- FILTRO DEFINITIVO ---
-        # 1. Remove linhas que contêm títulos de texto conhecidos
+        # --- PASSO 1: LIMPEZA INDEPENDENTE (O Segredo do Alinhamento) ---
+        # Definimos o que é "lixo" que a ESPN joga no meio da tabela
         lixo = "Conferência|Leste|Oeste|CONF|DIV|Divisão|Noroeste|Pacífico|Sudoeste|Atlântico|Central|Sudeste"
-        df = df[~df.iloc[:, 0].str.contains(lixo, case=False, na=False)]
+
+        # Limpamos a tabela de nomes
+        df_nomes = df_nomes[~df_nomes.iloc[:, 0].str.contains(lixo, case=False, na=False)]
         
-        # 2. O PULO DO GATO: Mantém apenas onde a 2ª coluna (Vitórias) é um número.
-        # Isso elimina as linhas de cabeçalho repetidas ("V", "D", "PCT")
-        df = df[pd.to_numeric(df.iloc[:, 1], errors='coerce').notnull()]
-        
-        # 3. Garante que temos os 30 times e reseta o índice
-        df = df.head(30).reset_index(drop=True)
-        
-        # Use exatamente esta ordem de 13 colunas no seu script Python           
-        cols = ['time','v','d','pct','ja','casa','visitante', 'div', 'conf', 'pts', 'pts_contra', 'dif', 'strk',]
+        # Limpamos a tabela de estatísticas (removemos linhas onde 'V' não é número)
+        # Isso remove os cabeçalhos repetidos "V", "D", "PCT"
+        df_stats = df_stats[pd.to_numeric(df_stats.iloc[:, 0], errors='coerce').notnull()]
+
+        # --- PASSO 2: RESET DE ÍNDICE E JUNÇÃO ---
+        # Forçamos as duas tabelas a começarem do zero para alinharem perfeitamente
+        df_nomes = df_nomes.reset_index(drop=True)
+        df_stats = df_stats.reset_index(drop=True)
+
+        # Juntamos as duas agora que estão alinhadas
+        df = pd.concat([df_nomes, df_stats], axis=1)
+
+        # --- PASSO 3: FORMATAÇÃO FINAL ---
+        # Pegamos os 30 times e as 13 colunas do seu banco
+        df = df.head(30)
+        cols = ['time','v','d','pct','ja','casa','visitante','div','conf','pts','pts_contra','dif','strk',]
         df = df.iloc[:, :13]
         df.columns = cols
 
+        # Limpeza do nome (Remove posição e sigla como '1OKC')
+        def limpar_nome(nome):
+            nome = re.sub(r'^\d+', '', str(nome)) # Remove número no início
+            nome = re.sub(r'^[A-Z]{2,3}', '', nome) # Remove sigla (OKC, DET, etc)
+            return nome.strip()
+
+        df['time'] = df['time'].apply(limpar_nome)
         
-        # LIMPEZA DOS NOMES (Ex: '1OKCOklahoma City' -> 'Oklahoma City')
-        # Remove números no início e siglas de 2 ou 3 letras maiúsculas coladas
-        df['time'] = df['time'].astype(str).str.replace(r'^\d+|[A-Z]{2,3}', '', regex=True).str.strip()
-
-        # Converte tudo para string para evitar erros de JSON no Supabase
+        # Transforma tudo em String para o Supabase aceitar sem erros
         df = df.fillna('0').astype(str)
-
         dados = df.to_dict(orient='records')
 
-        # Atualiza o Supabase: Deleta o antigo e insere o novo
+        # --- PASSO 4: ENVIO ---
+        # Limpa a tabela e insere os dados novos e alinhados
         db.table("classificacao_nba").delete().neq("time", "vazio").execute()
         db.table("classificacao_nba").insert(dados).execute()
         
-        print(f"✅ Sucesso! {len(dados)} times atualizados no banco de dados.")
+        print(f"✅ Sucesso! {len(dados)} times alinhados e atualizados.")
+        
     except Exception as e:
-        print(f"❌ Erro crítico: {e}")
+        print(f"❌ Erro no processamento: {e}")
         exit(1)
 
 if __name__ == "__main__":
