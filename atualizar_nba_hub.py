@@ -26,7 +26,7 @@ def rodar():
         
         # SELEÇÃO DAS 13 COLUNAS EXATAS
         df = df.iloc[:, :13]
-        cols = ['time','v','d','pct','ja','conf','casa','visitante','div', 'pts', 'pts_contra', 'dif','strk'']
+        cols = ['time','v','d','pct','ja','conf','casa','visitante','div', 'pts', 'pts_contra', 'dif','strk',]
         df.columns = cols
         
         # LIMPEZA DOS NOMES (Ex: '1Thunder' vira 'Thunder')
