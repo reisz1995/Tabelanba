@@ -28,10 +28,9 @@ def rodar():
         # 3. Garante que temos os 30 times e reseta o índice
         df = df.head(30).reset_index(drop=True)
         
-        # Use exatamente esta ordem de 13 colunas no seu script Python
-cols = ['time', 'v', 'd', 'pct', 'ja', 'casa', 'visitante', 'div', 'conf', 'pts', 'pts_contra', 'dif', 'strk']
-df = df.iloc[:, :13]
-df.columns = cols
+        # Use exatamente esta ordem de 13 colunas no seu script Python           cols=['time','v','d','pct','ja','casa','visitante', 'div', 'conf', 'pts', 'pts_contra', 'dif', 'strk',]
+        df = df.iloc[:, :13]
+        df.columns = cols
 
         
         # LIMPEZA DOS NOMES (Ex: '1OKCOklahoma City' -> 'Oklahoma City')
