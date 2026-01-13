@@ -19,14 +19,11 @@ def rodar():
         # Remove linhas de título para não pular times como o Thunder
         df = df[~df.iloc[:, 0].str.contains("Conferência|Leste|Oeste|CONF", case=False, na=False)]
         
-        # SELEÇÃO DAS 10 COLUNAS
-        # Aqui pegamos as 10 primeiras e damos exatamente 10 nomes
-        df = df.iloc[:, :10]
-        cols = ['time', 'v', 'd', 'pct', 'ja', 'conf', 'casa', 'visitante', 'u10', 'strk']
+        # SELEÇÃO DAS 13 COLUNAS
+        # Aqui pegamos as 13 primeiras e damos exatamente 13 nomes
+        df = df.iloc[:, :13]
+        cols = ['time','v','d','pct','ja','conf','casa','visitante','div', 'pts', 'pts_contra', 'dif','strk',]
         df.columns = cols
-
-        # Limpa o nome (remove o '1' de '1Thunder')
-        df['time'] = df['time'].astype(str).str.replace(r'^\d+', '', regex=True).str.strip()
         
         # Resolve erro de JSON transformando tudo em string
         df = df.fillna('0').astype(str)
