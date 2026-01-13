@@ -59,7 +59,7 @@ def rodar():
         if lista_times:
             # Limpa os dados antigos
             db.table("classificacao_nba").delete().neq("time", "vazio").execute()
-            # Insere os novos dados alinhados da API
+            # Insere os novos dados alinhados da API oi jc
             db.table("classificacao_nba").insert(lista_times).execute()
             
             print(f"✅ Sucesso! {len(lista_times)} times atualizados diretamente via API-Sports.")
