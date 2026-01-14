@@ -20,7 +20,7 @@ jobs:
 
       - name: Executar Script
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
         run: python atualizar_nba.py
