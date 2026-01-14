@@ -1,44 +1,46 @@
+
 import requests
 import os
 from supabase import create_client
 
-# Configurações extraídas do GitHub Secrets
+# Configurações de Ambiente (Puxadas do GitHub Actions)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY") # Sua chave direta da API-Sports
+API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY")
 
+# Inicializa o cliente Supabase
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def rodar():
-    # URL Direta da API-Sports (sem o domínio rapidapi)
+    # URL Direta da API-Sports
     url = "https://v1.nba.api-sports.io/standings"
     
-    # Parâmetros: 'standard' para NBA e a temporada 2024 (que cobre 2024-25)
+    # Parâmetros para a liga standard e temporada atual (2024-25)
     querystring = {"league": "standard", "season": "2024"}
     
-    # Cabeçalho de autenticação direto da API-Sports
+    # Cabeçalho de autenticação específico da API-Sports
     headers = {
         "x-apisports-key": API_SPORTS_KEY
     }
 
     try:
-        print("🚀 Conectando diretamente à API-Sports...")
+        print("🏀 Iniciando busca de dados na API-Sports...")
         response = requests.get(url, headers=headers, params=querystring)
-        data = response.json()
+        response.raise_for_status() # Garante que o script para se houver erro de conexão
         
-        # A API-Sports retorna os dados dentro da chave 'response'
-        standings = data.get('response', [])
-        
+        dados_json = response.json()
+        standings = dados_json.get('response', [])
+
         if not standings:
-            print("⚠️ Aviso: Nenhum dado retornado. Verifique sua chave ou os parâmetros.")
+            print("⚠️ A API não retornou dados de classificação.")
             return
 
         lista_times = []
 
         for item in standings:
-            # Mapeamento profissional para suas 13 colunas
-            # Aqui os dados de vitórias e nomes estão 'amarrados' no mesmo objeto
-            time_data = {
+            # No JSON da API, os dados estão hierarquizados. 
+            # O nome do time e as vitórias estão no mesmo objeto 'item'.
+            dados_formatados = {
                 "time": item['team']['name'],
                 "v": str(item['win']['total']),
                 "d": str(item['loss']['total']),
@@ -48,25 +50,25 @@ def rodar():
                 "visitante": f"{item['win']['away']}-{item['loss']['away']}",
                 "div": f"{item['division']['name']} ({item['division']['rank']})",
                 "conf": f"{item['conference']['name']} ({item['conference']['rank']})",
-                "pts": "0", 
+                "pts": "0", # A API de Standings foca em Vitórias/Derrotas
                 "pts_contra": "0",
                 "dif": "0",
                 "strk": str(item['streak']) if item['streak'] else '0'
             }
-            lista_times.append(time_data)
+            lista_times.append(dados_formatados)
 
         # Atualização no Supabase
         if lista_times:
-            # Limpa os dados antigos
+            # 1. Limpa a tabela atual
             db.table("classificacao_nba").delete().neq("time", "vazio").execute()
-            # Insere os novos dados alinhados da API oi jc
+            
+            # 2. Insere os novos dados (30 times perfeitamente alinhados)
             db.table("classificacao_nba").insert(lista_times).execute()
             
-            print(f"✅ Sucesso! {len(lista_times)} times atualizados diretamente via API-Sports.")
-            # O Thunder agora terá os dados dele na linha dele.
+            print(f"✅ Sucesso! {len(lista_times)} times atualizados sem erros.")
 
     except Exception as e:
-        print(f"❌ Erro na integração: {e}")
+        print(f"❌ Erro crítico: {e}")
 
 if __name__ == "__main__":
     rodar()
