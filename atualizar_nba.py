@@ -11,49 +11,63 @@ API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY")
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def rodar():
-    # URL Direta da API-Sports
-    url = "https://v1.nba.api-sports.io/standings"
+    # URL Correta da API-Sports NBA
+    url = "https://v1.basketball.api-sports.io/standings"
     
-    # Parâmetros para a liga standard e temporada atual
-    # Nota: 2025 para a temporada atual
-    querystring = {"league": "standard", "season": "2025"}
+    # Parâmetros para a NBA temporada 2024-2025
+    # Na API-Sports Basketball, a liga NBA tem ID específico
+    querystring = {
+        "league": "12",  # ID da NBA
+        "season": "2024-2025"  # Formato correto da temporada
+    }
     
-    # Cabeçalho de autenticação específico da API-Sports
+    # Cabeçalho de autenticação
     headers = {
         "x-apisports-key": API_SPORTS_KEY
     }
 
     try:
         print("🏀 Iniciando busca de dados na API-Sports...")
-        response = requests.get(url, headers=headers, params=querystring)
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"URL requisitada: {response.url}")
+        
         response.raise_for_status() 
         
         dados_json = response.json()
+        
+        # Debug: mostra a estrutura da resposta
+        print(f"Resposta da API: {dados_json.keys()}")
+        
         standings = dados_json.get('response', [])
 
         if not standings:
             print("⚠️ A API não retornou dados de classificação.")
+            print(f"Resposta completa: {dados_json}")
             return
 
         lista_times = []
 
         for item in standings:
-            # Na API, o nome do time e as vitórias estão no mesmo objeto JSON.
-            # Não há como os dados de um time caírem na linha de outro.
+            # Extrai os dados de cada time
+            team_data = item.get('team', {})
+            stats = item.get('games', {})
+            
             dados_formatados = {
-                "time": item['team']['name'],
-                "v": str(item['win']['total']),
-                "d": str(item['loss']['total']),
-                "pct": str(item['win']['percentage']),
-                "ja": str(item['gamesBehind'] if item['gamesBehind'] else '-'),
-                "casa": f"{item['win']['home']}-{item['loss']['home']}",
-                "visitante": f"{item['win']['away']}-{item['loss']['away']}",
-                "div": f"{item['division']['name']} ({item['division']['rank']})",
-                "conf": f"{item['conference']['name']} ({item['conference']['rank']})",
+                "time": team_data.get('name', 'Unknown'),
+                "v": str(stats.get('win', {}).get('total', 0)),
+                "d": str(stats.get('lose', {}).get('total', 0)),
+                "pct": str(stats.get('win', {}).get('percentage', '0.000')),
+                "ja": str(item.get('gamesBehind', '-')),
+                "casa": f"{stats.get('win', {}).get('home', 0)}-{stats.get('lose', {}).get('home', 0)}",
+                "visitante": f"{stats.get('win', {}).get('away', 0)}-{stats.get('lose', {}).get('away', 0)}",
+                "div": f"{item.get('division', {}).get('name', 'N/A')} ({item.get('division', {}).get('rank', '-')})",
+                "conf": f"{item.get('conference', {}).get('name', 'N/A')} ({item.get('conference', {}).get('rank', '-')})",
                 "pts": "0", 
                 "pts_contra": "0",
                 "dif": "0",
-                "strk": str(item['streak']) if item['streak'] else '0'
+                "strk": str(item.get('streak', '0'))
             }
             lista_times.append(dados_formatados)
 
@@ -62,11 +76,13 @@ def rodar():
             # 1. Limpa a tabela atual
             db.table("classificacao_nba").delete().neq("time", "vazio").execute()
             
-            # 2. Insere os novos dados (30 times perfeitamente alinhados)
+            # 2. Insere os novos dados
             db.table("classificacao_nba").insert(lista_times).execute()
             
             print(f"✅ Sucesso! {len(lista_times)} times atualizados sem erros.")
 
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erro de requisição: {e}")
     except Exception as e:
         print(f"❌ Erro crítico: {e}")
 
