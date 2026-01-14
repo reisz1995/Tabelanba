@@ -25,7 +25,7 @@ def rodar():
     try:
         print("🏀 Iniciando busca de dados na API-Sports...")
         response = requests.get(url, headers=headers, params=querystring)
-        response.raise_for_status() # Garante que o script para se houver erro de conexão
+        response.raise_for_status() 
         
         dados_json = response.json()
         standings = dados_json.get('response', [])
@@ -37,8 +37,8 @@ def rodar():
         lista_times = []
 
         for item in standings:
-            # No JSON da API, os dados estão hierarquizados. 
-            # O nome do time e as vitórias estão no mesmo objeto 'item'.
+            # Na API, o nome do time e as vitórias estão no mesmo objeto JSON.
+            # Não há como os dados de um time caírem na linha de outro.
             dados_formatados = {
                 "time": item['team']['name'],
                 "v": str(item['win']['total']),
@@ -49,7 +49,7 @@ def rodar():
                 "visitante": f"{item['win']['away']}-{item['loss']['away']}",
                 "div": f"{item['division']['name']} ({item['division']['rank']})",
                 "conf": f"{item['conference']['name']} ({item['conference']['rank']})",
-                "pts": "0", # A API de Standings foca em Vitórias/Derrotas
+                "pts": "0", 
                 "pts_contra": "0",
                 "dif": "0",
                 "strk": str(item['streak']) if item['streak'] else '0'
