@@ -49,8 +49,8 @@ def calcular_classificacao():
                 'nome': team['name'],
                 'conferencia': team['conference'],
                 'divisao': team['division'],
-                'v': 0,  # vitórias
-                'd': 0,  # derrotas
+                'v': 0,
+                'd': 0,
                 'casa_v': 0,
                 'casa_d': 0,
                 'fora_v': 0,
@@ -229,35 +229,3 @@ def calcular_classificacao():
 
 if __name__ == "__main__":
     calcular_classificacao()
-```
-
-E atualize o arquivo `.github/workflows/atualizar.yml`:
-
-```yaml
-name: NBA Hub Updater
-on:
-  schedule:
-    - cron: '0 * * * *' # Roda a cada 1 hora
-  workflow_dispatch: # Permite rodar manualmente clicando num botão
-
-jobs:
-  atualizar:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configurar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Instalar bibliotecas
-        run: pip install requests supabase
-
-      - name: Executar Script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
-        run: python atualizar_nba.py
-```
