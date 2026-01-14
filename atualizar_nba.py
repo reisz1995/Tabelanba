@@ -23,12 +23,12 @@ def calcular_classificacao():
         "Authorization": BALLDONTLIE_API_KEY
     }
     
-    # Temporada atual 2024-2025 (representada como 2024 na API)
-    temporada_atual = 2024
+    # Temporada atual 2025-2026 (representada como 2024 na API)
+    temporada_atual = 2025
     
     try:
         print("🏀 Iniciando busca de dados na Ball Don't Lie API...")
-        print(f"📅 Temporada: 2024-2025")
+        print(f"📅 Temporada: 2025-2026")
         
         # Primeiro, buscar todos os times
         print("📋 Buscando lista de times...")
@@ -132,7 +132,7 @@ def calcular_classificacao():
             
             page += 1
         
-        print(f"✅ Total de {total_jogos} jogos processados da temporada 2024-2025!")
+        print(f"✅ Total de {total_jogos} jogos processados da temporada 2025-2026!")
         
         # Calcular estatísticas finais
         lista_times = []
