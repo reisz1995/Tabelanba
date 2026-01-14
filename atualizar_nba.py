@@ -1,23 +1,27 @@
 import requests
 import os
 from supabase import create_client
-from collections import defaultdict
 
 # Configurações de Ambiente (Puxadas do GitHub Actions)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+BALLDONTLIE_API_KEY = os.environ.get("BALLDONTLIE_API_KEY")
 
 # Inicializa o cliente Supabase
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def calcular_classificacao():
     """
-    Ball Don't Lie API não tem endpoint de standings direto,
-    então vamos buscar todos os jogos da temporada e calcular a classificação
+    Ball Don't Lie API - busca jogos da temporada e calcula a classificação
     """
     
     # URL da API Ball Don't Lie v1
     base_url = "https://api.balldontlie.io/v1"
+    
+    # Headers com autenticação
+    headers = {
+        "Authorization": BALLDONTLIE_API_KEY
+    }
     
     # Temporada atual 2024-2025 (representada como 2024 na API)
     temporada_atual = 2024
@@ -28,7 +32,7 @@ def calcular_classificacao():
         
         # Primeiro, buscar todos os times
         print("📋 Buscando lista de times...")
-        teams_response = requests.get(f"{base_url}/teams", timeout=10)
+        teams_response = requests.get(f"{base_url}/teams", headers=headers, timeout=10)
         teams_response.raise_for_status()
         teams_data = teams_response.json()
         teams = teams_data.get('data', [])
@@ -67,7 +71,7 @@ def calcular_classificacao():
                 'page': page
             }
             
-            games_response = requests.get(games_url, params=params, timeout=10)
+            games_response = requests.get(games_url, headers=headers, params=params, timeout=10)
             games_response.raise_for_status()
             games_data = games_response.json()
             
@@ -225,3 +229,35 @@ def calcular_classificacao():
 
 if __name__ == "__main__":
     calcular_classificacao()
+```
+
+E atualize o arquivo `.github/workflows/atualizar.yml`:
+
+```yaml
+name: NBA Hub Updater
+on:
+  schedule:
+    - cron: '0 * * * *' # Roda a cada 1 hora
+  workflow_dispatch: # Permite rodar manualmente clicando num botão
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar bibliotecas
+        run: pip install requests supabase
+
+      - name: Executar Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+        run: python atualizar_nba.py
+```
