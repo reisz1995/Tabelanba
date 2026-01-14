@@ -14,11 +14,11 @@ def rodar():
     # URL Correta da API-Sports NBA
     url = "https://v1.basketball.api-sports.io/standings"
     
-    # Parâmetros para a NBA temporada 2024-2025
+    # Parâmetros para a NBA temporada 2025-2026
     # Na API-Sports Basketball, a liga NBA tem ID específico
     querystring = {
         "league": "12",  # ID da NBA
-        "season": "2024-2025"  # Formato correto da temporada
+        "season": "2025-2026"  # Formato correto da temporada
     }
     
     # Cabeçalho de autenticação
