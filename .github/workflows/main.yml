@@ -22,5 +22,4 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
         run: python atualizar_nba.py
