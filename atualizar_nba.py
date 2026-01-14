@@ -43,12 +43,19 @@ def calcular_classificacao():
         stats = {}
         for team in teams:
             team_id = team['id']
+            conference = team.get('conference', 'Unknown')
+            division = team.get('division', 'Unknown')
+            
+            # Pular times sem conferência definida
+            if not conference or conference == 'Unknown':
+                continue
+            
             stats[team_id] = {
                 'time': team['full_name'],
                 'cidade': team['city'],
                 'nome': team['name'],
-                'conference': team['conference'],
-                'division': team['division'],
+                'conference': conference,
+                'division': division,
                 'v': 0,
                 'd': 0,
                 'casa_v': 0,
@@ -87,6 +94,11 @@ def calcular_classificacao():
                     
                 home_team_id = game['home_team']['id']
                 visitor_team_id = game['visitor_team']['id']
+                
+                # Pular se algum time não está nas estatísticas
+                if home_team_id not in stats or visitor_team_id not in stats:
+                    continue
+                
                 home_score = game['home_team_score']
                 visitor_score = game['visitor_team_score']
                 
@@ -164,7 +176,9 @@ def calcular_classificacao():
                 'strk': streak
             }
             
-            conferencias[team_stats['conference']].append(dados_time)
+            # Adicionar apenas se a conferência existir no dicionário
+            if team_stats['conference'] in conferencias:
+                conferencias[team_stats['conference']].append(dados_time)
         
         # Ordenar cada conferência por porcentagem de vitórias
         for conf in conferencias.values():
