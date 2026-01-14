@@ -14,8 +14,9 @@ def rodar():
     # URL Direta da API-Sports
     url = "https://v1.nba.api-sports.io/standings"
     
-    # Parâmetros para a liga standard e temporada atual (2024-25)
-    querystring = {"league": "standard", "season": "2024"}
+    # Parâmetros para a liga standard e temporada atual
+    # Nota: 2025 para a temporada atual
+    querystring = {"league": "standard", "season": "2025"}
     
     # Cabeçalho de autenticação específico da API-Sports
     headers = {
