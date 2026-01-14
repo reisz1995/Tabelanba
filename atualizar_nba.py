@@ -47,8 +47,8 @@ def calcular_classificacao():
                 'time': team['full_name'],
                 'cidade': team['city'],
                 'nome': team['name'],
-                'conferencia': team['conference'],
-                'divisao': team['division'],
+                'conference': team['conference'],
+                'division': team['division'],
                 'v': 0,
                 'd': 0,
                 'casa_v': 0,
@@ -159,12 +159,12 @@ def calcular_classificacao():
                 'pct': pct,
                 'casa': f"{team_stats['casa_v']}-{team_stats['casa_d']}",
                 'visitante': f"{team_stats['fora_v']}-{team_stats['fora_d']}",
-                'div': team_stats['divisao'],
-                'conf': team_stats['conferencia'],
+                'div': team_stats['division'],
+                'conf': team_stats['conference'],
                 'strk': streak
             }
             
-            conferencias[team_stats['conferencia']].append(dados_time)
+            conferencias[team_stats['conference']].append(dados_time)
         
         # Ordenar cada conferência por porcentagem de vitórias
         for conf in conferencias.values():
